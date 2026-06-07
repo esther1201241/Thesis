@@ -1,6 +1,0 @@
-period,promotions_selected,max_promotions_allowed,expected_retailer_funded_markdown,expected_full_consumer_discount_value,max_realized_retailer_funded_markdown
-1,2,3,0.463236671,4.632366712,0.536797113
-2,3,3,0.42023635,4.202363502,0.511289056
-3,3,3,0.430220006,4.302200055,0.545417989
-4,2,3,0.05519629,0.551962896,0.063410892
-5,0,3,0,0,0
