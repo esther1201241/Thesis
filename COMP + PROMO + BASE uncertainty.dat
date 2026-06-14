@@ -1,0 +1,221 @@
+/*********************************************
+ * OPL Data - Esther thesis
+ * Base model without emergency trucks
+ * 4 products, 5 periods, 3 scenarios
+ * Products:
+ *   1 = HOT_DOGS
+ *   2 = HOT_DOG_BUNS
+ *   3 = PASTA
+ *   4 = PASTA_SAUCE
+ * Scenarios:
+ *   1 = low
+ *   2 = regular
+ *   3 = high
+ *********************************************/
+runName = "FIXEDTESTCOMPWITHPROMO_COMP_";
+
+nI = 4;
+nT = 5;
+nS = 27;
+nB = 3;
+
+baseScenario = [
+  1,1,1,1,1,1,1,1,1,
+  2,2,2,2,2,2,2,2,2,
+  3,3,3,3,3,3,3,3,3
+];
+
+pi = [									//Probabilities for each scenario
+  0.015625, 0.03125, 0.015625,
+  0.03125,  0.0625,  0.03125,
+  0.015625, 0.03125, 0.015625,
+
+  0.03125,  0.0625,  0.03125,
+  0.0625,   0.125,   0.0625,
+  0.03125,  0.0625,  0.03125,
+
+  0.015625, 0.03125, 0.015625,
+  0.03125,  0.0625,  0.03125,
+  0.015625, 0.03125, 0.015625
+];
+
+// The use of complementarity, 1 when on, 0 when off
+useComplementarity = 1;
+
+//Own Promotion multiplier
+ownPromoMult = [
+  0.8, 0.8, 0.8,
+  1.0, 1.0, 1.0,
+  1.2, 1.2, 1.2,
+
+  0.8, 0.8, 0.8,
+  1.0, 1.0, 1.0,
+  1.2, 1.2, 1.2,
+
+  0.8, 0.8, 0.8,
+  1.0, 1.0, 1.0,
+  1.2, 1.2, 1.2
+];
+
+//Complementary multipliers
+compPromoMult = [
+  0.8, 1.0, 1.2,
+  0.8, 1.0, 1.2,
+  0.8, 1.0, 1.2,
+
+  0.8, 1.0, 1.2,
+  0.8, 1.0, 1.2,
+  0.8, 1.0, 1.2,
+
+  0.8, 1.0, 1.2,
+  0.8, 1.0, 1.2,
+  0.8, 1.0, 1.2
+];
+
+
+//fixedX = [
+//  [1, 1, 1, 0, 0],  // product 1: hot dogs
+//  [0, 0, 0, 0, 0],  // product 2: hot dog buns
+//  [1, 1, 0, 0, 1],  // product 3: pasta
+//  [1, 1, 1, 0, 0]   // product 4: pasta sauce
+//];
+
+//fixedY = [1, 2, 2, 1, 2];
+
+// Own-promotion uplift from your model_demand table
+u = [1.659723, 0.335079, 1.618973, 1.262993];
+
+// Post-promotion dip
+// Not estimated yet, so set to 0 for now
+g = [0.0, 0.0, 0.0, 0.0];
+
+// Revised cost assumptions
+// COGS is approximated as 70% of the selling price, implying a 30% gross margin.
+cogsRate = 0.70;
+
+//Expected fill rate
+// The model cannot unlimitedly choose lost sales, an overall service rate needs to be satisfied
+minExpectedFillRate = 0.0;
+
+// Holding cost is an annual inventory carrying cost applied to COGS and
+// converted to the 4-week model period.
+holdingCostAnnualRate = 0.20;
+weeksPerPeriod = 4;
+
+// Variable shipment/handling cost per shipped unit. This is applied to COGS,
+// so 0.05 corresponds to 5% of inventory value.
+shipmentCostRate = 0.05;
+
+// Extra lost-sales penalty. The missed gross margin is already captured because
+// unsold units do not generate revenue. This 60% captures additional goodwill/service costs.
+lostSalesPenaltyMultiplier = 0.6;
+
+a = [15.688401, 18.842831, 16.664910, 25.651550]; // Package size of each product
+// Regular selling price from empirical data
+P = [2.892952, 1.179131, 1.100048, 1.827235];
+
+// Product-specific average consumer-facing discount depth from emprirical data
+delta = [0.402770, 0.148481, 0.047247, 0.031344];
+
+// Share of the observed consumer-facing markdown that is assumed to be borne by the retailer, 10% here.
+// The remaining share can be interpreted as supplier-funded promotional support.
+retailerPromoShare = 0.10;
+
+// Initial inventory
+// Set equal to period-1 regular baseline demand
+I0 = [1.444444, 2.430769, 1.587108, 1.800000];
+
+// Promotion status before period 1
+promo0 = [0, 0, 0, 0];
+
+// Regular trucks are pre-booked before demand is known.
+// Calibrated regular-truck cost. With the current price and capacity scaling,
+Ftruck = 2.0;
+//FEmergencyTruck = 15; // Emergency trucks can be added to the base model, but are not used in this form
+Cap = 150; // Capacity per truck is 150 units
+
+// Limit the number of regular trucks that can be reserved in advance.
+// This makes emergency trucks relevant when demand is high or when it is too costly
+// to reserve enough regular capacity for all scenarios.
+maxRegularTrucks = [5, 5, 5, 5, 5];
+
+// gamma[i][j] = effect on demand of product i when product j is promoted
+// Order: HOT_DOGS, HOT_DOG_BUNS, PASTA, PASTA_SAUCE
+gamma = [
+ [0.000000, 0.198441, 0.000000, 0.000000],
+ [0.251737, 0.000000, 0.000000, 0.000000],
+ [0.000000, 0.000000, 0.000000, 0.537236],
+ [0.000000, 0.000000, 0.470358, 0.000000]
+];
+
+
+
+// jointGamma[i][j] = extra effect on demand of product i when product i and product j are promoted together
+// This is an additional interaction effect on top of u[i] and gamma[i][j].
+// Order: HOT_DOGS, HOT_DOG_BUNS, PASTA, PASTA_SAUCE
+jointGamma = [
+ [0.000000, 0.110400, 0.000000, 0.000000],
+ [0.324800, 0.000000, 0.000000, 0.000000],
+ [0.000000, 0.000000, 0.000000, 0.613300],
+ [0.000000, 0.000000, 0.503700, 0.000000]
+];
+
+// Promotion-frequency constraints
+// Each product can be promoted at most three times over the five-period horizon.
+maxPromosPerProduct = [3, 3, 3, 3];
+
+// Optional lower bound on promotions per product, set to 0, so not active in this model. 
+minPromosPerProduct = [0, 0, 0, 0];
+
+// At most two products can be promoted in the same period.
+// This replaces the monetary promotion budget and represents limited promotional planning capacity,
+// flyer/display space, and category-management restrictions.
+maxPromosPerPeriod = [3, 3, 3, 3, 3];
+
+//The model can at maximum promote 10 products over the entire timeline
+maxTotalPromos = 10;
+
+// Big-M values for w = x*z linearization
+// Chosen large enough for the 5-period demand scenarios and promotion effects.
+M = [
+ [5, 5, 5, 6, 7],   // HOT_DOGS
+ [7, 5, 6, 6, 9],   // HOT_DOG_BUNS
+ [7, 8, 8, 7, 7],   // PASTA
+ [6, 7, 7, 7, 7]    // PASTA_SAUCE
+];
+
+
+// Baseline demand scenarios
+// dbar[i][t][s], with s = low, regular, high
+// Periods are 4-week buckets.
+dbarBase = [
+  [ // product 1 = HOT_DOGS
+    [0.717961, 1.444444, 2.170928],
+    [0.825800, 1.500000, 2.174200],
+    [0.673638, 1.555556, 2.437473],
+    [0.666667, 1.666667, 2.666667],
+    [1.094455, 2.600000, 4.105545]
+  ],
+  [ // product 2 = HOT_DOG_BUNS
+    [0.321996, 2.430769, 4.539543],
+    [0.811937, 1.869565, 2.927193],
+    [0.909316, 2.411765, 3.914214],
+    [0.446262, 2.040000, 3.633738],
+    [0.854742, 3.697368, 6.539995]
+  ],
+  [ // product 3 = PASTA
+    [0.478259, 1.587108, 2.695957],
+    [0.496160, 1.800000, 3.103840],
+    [0.927871, 2.142857, 3.357843],
+    [1.089316, 1.666667, 2.244017],
+    [0.500000, 1.500000, 2.500000]
+  ],
+  [ // product 4 = PASTA_SAUCE
+    [0.963340, 1.800000, 2.636660],
+    [0.496160, 1.800000, 3.103840],
+    [0.930955, 2.000000, 3.069045],
+    [1.263249, 2.461538, 3.659828],
+    [0.000000, 1.800000, 3.673796]
+  ]
+];
+
