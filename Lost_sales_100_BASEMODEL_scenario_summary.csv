@@ -1,0 +1,4 @@
+scenario,probability,total_demand,fulfilled_sales,lost_sales,fill_rate,shipped_quantity,used_capacity,available_capacity
+1,0.25,33.953253,33.953253,0,1,26.690932,511.586447697,1500
+2,0.5,59.259473,59.259473,0,1,51.997152,1004.254664893,1500
+3,0.25,84.639491,84.639491,0,1,77.37717,1498.815910545,1500
