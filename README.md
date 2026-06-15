@@ -16,3 +16,4 @@ The repository includes:
 - Processed data input files used by the models. (main branch)
 - Python scripts used for the empirical data analysis and preparation of model inputs. (main branch)
 - Selected model output files used to support the results presented in the thesis. (output files branch)
+- Full AI logbook that explains AI use during the thesis process. (main branch)
